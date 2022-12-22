@@ -58,7 +58,7 @@ enum opcode_t {
 
     /* real instruction opcodes */
     OP_ADD, OP_AND, OP_BR, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
-    OP_LEA, OP_NOT, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
+    OP_LEA, OP_NEG, OP_NOT, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -78,7 +78,7 @@ static const char* const opnames[NUM_OPS] = {
 
     /* real instruction opcodes */
     "ADD", "AND", "BR", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
-    "NOT", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
+    "NEG", "NOT", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -122,6 +122,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x018, /* LDI: RI or RL formats only   */
     0x002, /* LDR: RRI format only         */
     0x018, /* LEA: RI or RL formats only   */
+    0x020, /* NEG: R format only           */
     0x004, /* NOT: RR format only          */
     0x020, /* RST: R format only           */
     0x200, /* RTI: no operands allowed     */
@@ -246,6 +247,7 @@ LDI       {inst.op = OP_LDI;   BEGIN (ls_operands);}
 LDR       {inst.op = OP_LDR;   BEGIN (ls_operands);}
 LD        {inst.op = OP_LD;    BEGIN (ls_operands);}
 LEA       {inst.op = OP_LEA;   BEGIN (ls_operands);}
+NEG       {inst.op = OP_NEG;   BEGIN (ls_operands);}
 NOT       {inst.op = OP_NOT;   BEGIN (ls_operands);}
 RST       {inst.op = OP_RST;   BEGIN (ls_operands);}
 RTI       {inst.op = OP_RTI;   BEGIN (ls_operands);}
@@ -664,6 +666,13 @@ generate_instruction (operands_t operands, const char* opstr)
 	    break;
 	case OP_LEA:
 	    write_value (0xE000 | (r1 << 9) | (val & 0x1FF));
+	    break;
+    case OP_NEG:
+        /* negate a register:
+           NOT r1, r1
+           ADD r1, r1, #1 */
+	    write_value (0x903F | (r1 << 9) | (r1 << 6));
+		write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
 	    break;
 	case OP_NOT:
 	    write_value (0x903F | (r1 << 9) | (r2 << 6));
