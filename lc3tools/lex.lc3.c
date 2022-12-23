@@ -1589,7 +1589,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x002, /* LDR: RRI format only         */
     0x018, /* LEA: RI or RL formats only   */
     0x003, /* MLT: RRR or RRI formats only */
-    0x020, /* NEG: R format only           */
+    0x004, /* NEG: RR format only          */
     0x004, /* NOT: RR format only          */
     0x020, /* RST: R format only           */
     0x200, /* RTI: no operands allowed     */
@@ -3586,7 +3586,7 @@ generate_instruction (operands_t operands, const char* opstr)
 		   prevents execution of second, so never fails). */
 	        (void)read_val (o3, &val, 5);
 		    //
-	    } else {
+	    } else{
             /* check if r3 is negative by adding 0 to r3 and checking condition code */
             write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x00 & 0x1F));
             // if r3 is negative, branch to code for negative multiplication
@@ -3602,14 +3602,7 @@ generate_instruction (operands_t operands, const char* opstr)
             // RST R1
             write_value (0x5020 | (r1 << 9) | (val & 0x00));
             // ADD R1, R1, R2
-            if (operands == O_RRI) {
-	    	/* Check or read immediate range (error in first pass
-		      prevents execution of second, so never fails). */
-	        (void)read_val (o3, &val, 5);
-		    write_value (0x1020 | (r1 << 9) | (r1 << 6) | (val & 0x1F));
-	        } else{
             write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
-            }
             // SUB R3, R3, #1
 		    write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0xFF & 0x1F));
             // BRnp 2 spots earlier  (-3 because PC is already incremented)
@@ -3645,9 +3638,9 @@ generate_instruction (operands_t operands, const char* opstr)
         break;
     /* negate a register*/
     case OP_NEG:
-        /* NOT r1, r1
+        /* NOT r2, r1
            ADD r1, r1, #1 */
-	    write_value (0x903F | (r1 << 9) | (r1 << 6));
+	    write_value (0x903F | (r1 << 9) | (r2 << 6));
 		write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
 	    break;
 	case OP_NOT:
