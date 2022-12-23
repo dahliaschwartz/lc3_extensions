@@ -58,7 +58,7 @@ enum opcode_t {
 
     /* real instruction opcodes */
     OP_ADD, OP_AND, OP_BR, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
-    OP_LEA, OP_NEG, OP_NOT, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
+    OP_LEA, OP_MLT, OP_NEG, OP_NOT, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -78,7 +78,7 @@ static const char* const opnames[NUM_OPS] = {
 
     /* real instruction opcodes */
     "ADD", "AND", "BR", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
-    "NEG", "NOT", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
+    "MLT", "NEG", "NOT", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -122,6 +122,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x018, /* LDI: RI or RL formats only   */
     0x002, /* LDR: RRI format only         */
     0x018, /* LEA: RI or RL formats only   */
+    0x003, /* MLT: RRR or RRI formats only */
     0x020, /* NEG: R format only           */
     0x004, /* NOT: RR format only          */
     0x020, /* RST: R format only           */
@@ -247,6 +248,7 @@ LDI       {inst.op = OP_LDI;   BEGIN (ls_operands);}
 LDR       {inst.op = OP_LDR;   BEGIN (ls_operands);}
 LD        {inst.op = OP_LD;    BEGIN (ls_operands);}
 LEA       {inst.op = OP_LEA;   BEGIN (ls_operands);}
+MLT       {inst.op = OP_MLT;   BEGIN (ls_operands);}
 NEG       {inst.op = OP_NEG;   BEGIN (ls_operands);}
 NOT       {inst.op = OP_NOT;   BEGIN (ls_operands);}
 RST       {inst.op = OP_RST;   BEGIN (ls_operands);}
@@ -667,9 +669,68 @@ generate_instruction (operands_t operands, const char* opstr)
 	case OP_LEA:
 	    write_value (0xE000 | (r1 << 9) | (val & 0x1FF));
 	    break;
+    /* multiply */
+    // TO-DO: currently editing R3, save it somewhere
+    //        immediate value
+    case OP_MLT:
+        if (operands == O_RRI) {
+	    	/* Check or read immediate range (error in first pass
+		   prevents execution of second, so never fails). */
+	        (void)read_val (o3, &val, 5);
+		    //
+	    } else{
+            /* check if r3 is negative by adding 0 to r3 and checking condition code */
+            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x00 & 0x1F));
+            // if r3 is negative, branch to code for negative multiplication
+            inst.ccode = CC_N;
+            write_value (inst.ccode | (0x05 & 0x1FF));
+
+            // general case (positive r3):
+		    /* R1 = 0
+               R1 = R1 + R2
+               R3 = R3 - 1
+               BR not zero 2 spots earlier */
+            
+            // RST R1
+            write_value (0x5020 | (r1 << 9) | (val & 0x00));
+            // ADD R1, R1, R2
+            write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+            // SUB R3, R3, #1
+		    write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0xFF & 0x1F));
+            // BRnp 2 spots earlier  (-3 because PC is already incremented)
+            inst.ccode = CC_P | CC_N;
+            write_value (inst.ccode | (-0x03 & 0x1FF));
+            // branch to end of code (to skip code for negative r3)
+            inst.ccode = CC_P | CC_N | CC_Z;
+            write_value (inst.ccode | (0x06 & 0x1FF));
+
+            //negative R3
+            /* R1 = 0
+               R1 = R1 + R2
+               R3 = R3 + 1
+               BR not zero 2 spots earlier
+               Negate answer in R1 */
+            
+            // RST R1
+            write_value (0x5020 | (r1 << 9) | (val & 0x00));
+            // ADD R1, R1, R2
+            write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+            // ADD R3, R3, #1
+		    write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x01 & 0x1F));
+            // BRnp 2 spots earlier  (-3 because PC is already incremented)
+            inst.ccode = CC_P | CC_N;
+            write_value (inst.ccode | (-0x03 & 0x1FF));
+            /* NOT r1, r1
+               ADD r1, r1, #1 */
+	        write_value (0x903F | (r1 << 9) | (r1 << 6));
+		    write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+        }
+        /* Update condition code by adding 0 to the updated register */
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
+        break;
+    /* negate a register*/
     case OP_NEG:
-        /* negate a register:
-           NOT r1, r1
+        /* NOT r1, r1
            ADD r1, r1, #1 */
 	    write_value (0x903F | (r1 << 9) | (r1 << 6));
 		write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
@@ -693,6 +754,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	    (void)read_val (o3, &val, 6);
 	    write_value (0x7000 | (r1 << 9) | (r2 << 6) | (val & 0x3F));
 	    break;
+    /* subtract */
     case OP_SUB:
 	    if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
