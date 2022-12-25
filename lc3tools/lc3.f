@@ -687,60 +687,60 @@ generate_instruction (operands_t operands, const char* opstr)
 	    break;
     /* multiply */
     // TO-DO: currently editing R3, save it somewhere
+    //        repeated registers
     case OP_MLT:
-            /* check if r2 is negative by adding 0 to r2 and checking condition code */
-            write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0x00 & 0x1F));
-            // if r2 is negative, branch to code for negative multiplication
-            inst.ccode = CC_N;
-            write_value (inst.ccode | (0x05 & 0x1FF));
+        // RST R1 (R1 = 0)
+        write_value (0x5020 | (r1 << 9) | (val & 0x00));
 
-            // general case (positive r2):
-		    /* R1 = 0
-               R1 = R1 + R3
-               R2 = R2 - 1
-               BR not zero 2 spots earlier */
-            
-            // RST R1
-            write_value (0x5020 | (r1 << 9) | (val & 0x00));
-            // ADD R1, R1, R3
-            if (operands == O_RRI) {
-                (void)read_val (o3, &val, 5);
-		        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (val & 0x1F));
-            }
-            else write_value (0x1000 | (r1 << 9) | (r1 << 6) | r3);
-            // SUB R2, R2, #1
-		    write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0xFF & 0x1F));
-            // BRnp 2 spots earlier (-3 because PC is already incremented)
-            inst.ccode = CC_P | CC_N;
-            write_value (inst.ccode | (-0x03 & 0x1FF));
-            // branch to end of code (to skip code for negative r2)
-            inst.ccode = CC_P | CC_N | CC_Z;
-            write_value (inst.ccode | (0x06 & 0x1FF));
+        /* check if r2 is negative by adding 0 to r2 and checking condition code */
+        write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0x00 & 0x1F));
+        // if r2 is negative, branch to code for negative multiplication
+        inst.ccode = CC_N;
+        write_value (inst.ccode | (0x04 & 0x1FF));
 
-            //negative R2
-            /* R1 = 0
-               R1 = R1 + R3
-               R2 = R2 + 1
-               BR not zero 2 spots earlier
-               Negate answer in R1 */
-            
-            // RST R1
-            write_value (0x5020 | (r1 << 9) | (val & 0x00));
-            // ADD R1, R1, R3
-            if (operands == O_RRI) {
-                (void)read_val (o3, &val, 5);
-		        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (val & 0x1F));
-            }
-            else write_value (0x1000 | (r1 << 9) | (r1 << 6) | r3);
-            // ADD R2, R2, #1
-		    write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0x01 & 0x1F));
-            // BRnp 2 spots earlier  (-3 because PC is already incremented)
-            inst.ccode = CC_P | CC_N;
-            write_value (inst.ccode | (-0x03 & 0x1FF));
-            /* NOT r1, r1
-               ADD r1, r1, #1 */
+        // general case (positive R2):
+        /*  R1 = R1 + R3
+            R2 = R2 - 1
+            BR not zero 2 spots earlier */
+        
+        // ADD R1, R1, R3 (using a conditional statement to take immediate value into account)
+        if (operands == O_RRI) {
+            (void)read_val (o3, &val, 5);
+            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (val & 0x1F));
+        }
+        else write_value (0x1000 | (r1 << 9) | (r1 << 6) | r3);
+        // SUB R2, R2, #1
+        write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0xFF & 0x1F));
+        // BRnp 2 spots earlier (-3 because PC is already incremented)
+        inst.ccode = CC_P | CC_N;
+        write_value (inst.ccode | (-0x03 & 0x1FF));
+        // branch to end of code (to skip code for negative r2)
+        inst.ccode = CC_P | CC_N | CC_Z;
+        write_value (inst.ccode | (0x05 & 0x1FF));
+
+        // negative R2:
+        /*  R1 = R1 + R3
+            R2 = R2 + 1
+            BR not zero 2 spots earlier
+            Negate answer in R1 */
+        
+        // ADD R1, R1, R3 (using a conditional statement to take immediate value into account)
+        if (operands == O_RRI) {
+            (void)read_val (o3, &val, 5);
+            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (val & 0x1F));
+        }
+        else write_value (0x1000 | (r1 << 9) | (r1 << 6) | r3);
+        // ADD R2, R2, #1
+        write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0x01 & 0x1F));
+        // BRnp 2 spots earlier  (-3 because PC is already incremented)
+        inst.ccode = CC_P | CC_N;
+        write_value (inst.ccode | (-0x03 & 0x1FF));
+        /* negate R1, because answer should be negative:
+           NOT r1, r1
+           ADD r1, r1, #1 */
 	    write_value (0x903F | (r1 << 9) | (r1 << 6));
 		write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+
         /* Update condition code by adding 0 to the updated register */
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
         break;
