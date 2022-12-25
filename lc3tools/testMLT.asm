@@ -1,4 +1,5 @@
 	.ORIG x3000
 	ADD R1, R1, #2
-	MLT R3, R1, #3
+	ADD R0, R0, #10
+	MLT R3, R1, R0
 	.END
