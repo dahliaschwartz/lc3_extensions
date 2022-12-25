@@ -58,7 +58,7 @@ enum opcode_t {
 
     /* real instruction opcodes */
     OP_ADD, OP_AND, OP_BR, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
-    OP_LEA, OP_MLT, OP_NEG, OP_NOT, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
+    OP_LEA, OP_MLT, OP_MOV, OP_NEG, OP_NOT, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -78,7 +78,7 @@ static const char* const opnames[NUM_OPS] = {
 
     /* real instruction opcodes */
     "ADD", "AND", "BR", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
-    "MLT", "NEG", "NOT", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
+    "MLT", "MOV", "NEG", "NOT", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -123,6 +123,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x002, /* LDR: RRI format only         */
     0x018, /* LEA: RI or RL formats only   */
     0x003, /* MLT: RRR or RRI formats only */
+    0x004, /* MOV: RR format only          */
     0x004, /* NEG: RR format only          */
     0x004, /* NOT: RR format only          */
     0x020, /* RST: R format only           */
@@ -249,6 +250,7 @@ LDR       {inst.op = OP_LDR;   BEGIN (ls_operands);}
 LD        {inst.op = OP_LD;    BEGIN (ls_operands);}
 LEA       {inst.op = OP_LEA;   BEGIN (ls_operands);}
 MLT       {inst.op = OP_MLT;   BEGIN (ls_operands);}
+MOV       {inst.op = OP_MOV;   BEGIN (ls_operands);}
 NEG       {inst.op = OP_NEG;   BEGIN (ls_operands);}
 NOT       {inst.op = OP_NOT;   BEGIN (ls_operands);}
 RST       {inst.op = OP_RST;   BEGIN (ls_operands);}
@@ -728,9 +730,16 @@ generate_instruction (operands_t operands, const char* opstr)
         /* Update condition code by adding 0 to the updated register */
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
         break;
-    /* negate a register*/
+    /* copy the contents of registerA into registerB */
+    case OP_MOV:
+        /* AND r1, #0
+           ADD r1, r1, r2 */
+	    write_value (0x5020 | (r1 << 9) | (val & 0x00));
+        write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+	    break;
+    /* place the negation of registerA into registerB */
     case OP_NEG:
-        /* NOT r2, r1
+        /* NOT r1, r2
            ADD r1, r1, #1 */
 	    write_value (0x903F | (r1 << 9) | (r2 << 6));
 		write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
