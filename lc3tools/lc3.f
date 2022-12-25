@@ -57,7 +57,7 @@ enum opcode_t {
     OP_NONE,
 
     /* real instruction opcodes */
-    OP_ADD, OP_AND, OP_BR, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
+    OP_ADD, OP_AND, OP_BR, OP_DEC, OP_INC, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
     OP_LEA, OP_MLT, OP_MOV, OP_NEG, OP_NOT, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
 
     /* trap pseudo-ops */
@@ -77,7 +77,7 @@ static const char* const opnames[NUM_OPS] = {
     "missing opcode",
 
     /* real instruction opcodes */
-    "ADD", "AND", "BR", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
+    "ADD", "AND", "BR", "DEC", "INC", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
     "MLT", "MOV", "NEG", "NOT", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
 
     /* trap pseudo-ops */
@@ -115,6 +115,8 @@ static const int op_format_ok[NUM_OPS] = {
     0x003, /* ADD: RRR or RRI formats only */
     0x003, /* AND: RRR or RRI formats only */
     0x0C0, /* BR: I or L formats only      */
+    0x020, /* DEC: R format only           */
+    0x020, /* INC: R format only           */
     0x020, /* JMP: R format only           */
     0x0C0, /* JSR: I or L formats only     */
     0x020, /* JSRR: R format only          */
@@ -242,6 +244,8 @@ O_     {ENDLINE}
 ADD       {inst.op = OP_ADD;   BEGIN (ls_operands);}
 AND       {inst.op = OP_AND;   BEGIN (ls_operands);}
 BR{CCODE} {inst.op = OP_BR;    parse_ccode (yytext + 2); BEGIN (ls_operands);}
+DEC       {inst.op = OP_DEC;   BEGIN (ls_operands);}
+INC       {inst.op = OP_INC;   BEGIN (ls_operands);}
 JMP       {inst.op = OP_JMP;   BEGIN (ls_operands);}
 JSRR      {inst.op = OP_JSRR;  BEGIN (ls_operands);}
 JSR       {inst.op = OP_JSR;   BEGIN (ls_operands);}
@@ -645,6 +649,16 @@ generate_instruction (operands_t operands, const char* opstr)
 	        val = find_label (o1, 9);
 	    write_value (inst.ccode | (val & 0x1FF));
 	    break;
+     /* decrement the contents of a register by 1 */
+    case OP_DEC:
+        // ADD r1, r1, #-1
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0xFF & 0x1F));
+	    break;
+    /* incremement the contents of a register by 1 */
+    case OP_INC:
+        // ADD r1, r1, #1
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+	    break;
 	case OP_JMP:
 	    write_value (0xC000 | (r1 << 6));
 	    break;
@@ -747,8 +761,10 @@ generate_instruction (operands_t operands, const char* opstr)
 	case OP_NOT:
 	    write_value (0x903F | (r1 << 9) | (r2 << 6));
 	    break;
+    /* reset the contents of a register */
     case OP_RST:
-        write_value (0x5020 | (r1 << 9) | (val & 0x00));
+        // AND r1, r1, #0
+        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
         break;
 	case OP_RTI:
 	    write_value (0x8000);
