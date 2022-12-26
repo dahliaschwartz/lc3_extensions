@@ -58,7 +58,7 @@ enum opcode_t {
 
     /* real instruction opcodes */
     OP_ADD, OP_AND, OP_BR, OP_DEC, OP_INC, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
-    OP_LEA, OP_MLT, OP_MOV, OP_NEG, OP_NOT, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
+    OP_LEA, OP_MLT, OP_MOV, OP_NEG, OP_NOT, OP_OR, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -78,7 +78,7 @@ static const char* const opnames[NUM_OPS] = {
 
     /* real instruction opcodes */
     "ADD", "AND", "BR", "DEC", "INC", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
-    "MLT", "MOV", "NEG", "NOT", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
+    "MLT", "MOV", "NEG", "NOT", "OR", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -128,6 +128,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x004, /* MOV: RR format only          */
     0x004, /* NEG: RR format only          */
     0x004, /* NOT: RR format only          */
+    0x003, /* OR: RRR or RRI formats only  */
     0x020, /* RST: R format only           */
     0x200, /* RTI: no operands allowed     */
     0x018, /* ST: RI or RL formats only    */
@@ -257,6 +258,7 @@ MLT       {inst.op = OP_MLT;   BEGIN (ls_operands);}
 MOV       {inst.op = OP_MOV;   BEGIN (ls_operands);}
 NEG       {inst.op = OP_NEG;   BEGIN (ls_operands);}
 NOT       {inst.op = OP_NOT;   BEGIN (ls_operands);}
+OR        {inst.op = OP_OR;    BEGIN (ls_operands);}
 RST       {inst.op = OP_RST;   BEGIN (ls_operands);}
 RTI       {inst.op = OP_RTI;   BEGIN (ls_operands);}
 STI       {inst.op = OP_STI;   BEGIN (ls_operands);}
@@ -761,6 +763,47 @@ generate_instruction (operands_t operands, const char* opstr)
 	case OP_NOT:
 	    write_value (0x903F | (r1 << 9) | (r2 << 6));
 	    break;
+    /* place into registerA, registerB | registerC (bitwise 'or') */
+    case OP_OR:
+        // De Morgan's:
+        // A | B = NOT (NOT(A) & NOT(B))
+        
+        // special case: if r1 == r3: 
+        if ((operands == O_RRI) && (r1 == r3) && (r1 != r2)) {
+            // NOT R1, R3
+            write_value (0x903F | (r1 << 9) | (r3 << 6));
+            // NOT R2, R2
+            write_value (0x903F | (r2 << 9) | (r2 << 6));
+            // AND R1, R1, R2
+            write_value (0x5000 | (r1 << 9) | (r1 << 6) | r2);
+            // NOT R2, R2
+            write_value (0x903F | (r2 << 9) | (r2 << 6));   
+        }
+        // general case
+        else {
+        // NOT R1, R2
+        write_value (0x903F | (r1 << 9) | (r2 << 6));
+        
+        // Conditional statement depending on whether r3 has immediate value or register
+        if (operands == O_RRI) {
+            (void)read_val (o3, &val, 5);
+            // AND R1, R1, !R3
+            write_value (0x5020 | (r1 << 9) | (r1 << 6) | (~val & 0x1F));
+        } else {
+            // NOT R3, R3
+            write_value (0x903F | (r3 << 9) | (r3 << 6));
+            // AND R1, R1, R3
+            write_value (0x5000 | (r1 << 9) | (r1 << 6) | r3);
+            // NOT R3, R3
+            write_value (0x903F | (r3 << 9) | (r3 << 6));   
+        }
+        }
+        // NOT R1, R1
+        write_value (0x903F | (r1 << 9) | (r1 << 6));
+
+        /* Update condition code by adding 0 to the updated register */
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
+        break;
     /* reset the contents of a register */
     case OP_RST:
         // AND r1, r1, #0
@@ -782,12 +825,10 @@ generate_instruction (operands_t operands, const char* opstr)
     /* subtract */
     case OP_SUB:
 	    if (operands == O_RRI) {
-	    	/* Check or read immediate range (error in first pass
-		   prevents execution of second, so never fails). */
+            // ADD r1, r2, -val
 	        (void)read_val (o3, &val, 5);
 		    write_value (0x1020 | (r1 << 9) | (r2 << 6) | (-val & 0x1F));
 	    } else{
-
             /* if r1 == r2 == r3, make r1 = 0 */
             if (r1 == r2 && r1 == r3){
                 write_value (0x5020 | (r1 << 9) | (val & 0x00));
