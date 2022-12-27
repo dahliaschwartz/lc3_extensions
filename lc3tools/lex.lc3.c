@@ -3634,28 +3634,68 @@ generate_instruction (operands_t operands, const char* opstr)
     // TO-DO: currently editing R3, save it somewhere
     //        repeated registers
     case OP_MLT:
-        // RST R1 (R1 = 0)
-        write_value (0x5020 | (r1 << 9) | (val & 0x00));
+        /* find two registers that are not called by the user in the MLT operation,
+           these temporary registers will account for repeated registers */
+        ;
+        int tempA, tempB = 0;
 
-        /* check if r2 is negative by adding 0 to r2 and checking condition code */
-        write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0x00 & 0x1F));
-        // if r2 is negative, branch to code for negative multiplication
+        for (int i=0; i<=4; i++){
+            if ((i != r1) && (i != r2) && (i != r3)){
+                tempA = i;
+            }
+        }
+        for (int i=0; i<=5; i++){
+            if ((i != r1) && (i != r2) && (i != r3) && (i != tempA)){
+                tempB = i;
+            }
+        }
+        printf("\nr1: %d, r2: %d, r3: %d, tempA: %d, tempB: %d\n\n", r1, r2, r3, tempA, tempB);
+        /* store what's located in tempA and tempB into memory:
+           ST tempA, #2
+           ST tempB, #2
+           BRnzp #2 (to skip the locations in memory that contain tempA and tempB) */
+        write_value (0x3000 | (tempA << 9) | (0x02 & 0x1FF));
+        write_value (0x3000 | (tempB << 9) | (0x02 & 0x1FF));
+        inst.ccode = CC_N | CC_Z | CC_P;
+        write_value (inst.ccode | (0x02 & 0x1FF));
+
+        // PLACEHOLDERS
+        write_value (0x1000 | (r1 << 9) | (r1 << 6) | 0x00);
+        write_value (0x1000 | (r1 << 9) | (r1 << 6) | 0x00);
+
+        /* move the contents of r2 into tempA:
+           AND tempA, tempA, #0
+           ADD tempA, tempA, r2 */
+        write_value (0x5020 | (tempA << 9) | (tempA << 6) | (0x00 & 0x1F));
+        write_value (0x1000 | (tempA << 9) | (tempA << 6) | r2);
+        /* move the contents of r3 into tempB:
+           AND tempB, tempB, #0
+           ADD tempB, tempB, r3 */
+        write_value (0x5020 | (tempB << 9) | (tempB << 6) | (0x00 & 0x1F));
+        if (operands == O_RRI) {
+            (void)read_val (o3, &val, 5);
+            write_value (0x1020 | (tempB << 9) | (tempB << 6) | (val & 0x1F));
+        }
+        else write_value (0x1000 | (tempB << 9) | (tempB << 6) | r3);
+
+        // RST R1 (R1 = 0)
+        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
+
+        /* check if tempA is negative by adding 0 to tempA and checking condition code */
+        write_value (0x1020 | (tempA << 9) | (tempA << 6) | (0x00 & 0x1F));
+        // if tempA is negative, branch to code for negative multiplication
         inst.ccode = CC_N;
         write_value (inst.ccode | (0x04 & 0x1FF));
 
         // general case (positive R2):
-        /*  R1 = R1 + R3
-            R2 = R2 - 1
+        /*  R1 = R1 + tempB
+            tempA = tempA - 1
             BR not zero 2 spots earlier */
         
-        // ADD R1, R1, R3 (using a conditional statement to take immediate value into account)
-        if (operands == O_RRI) {
-            (void)read_val (o3, &val, 5);
-            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (val & 0x1F));
-        }
-        else write_value (0x1000 | (r1 << 9) | (r1 << 6) | r3);
-        // SUB R2, R2, #1
-        write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0xFF & 0x1F));
+        // ADD R1, R1, tempB
+        write_value (0x1000 | (r1 << 9) | (r1 << 6) | tempB);
+        // SUB tempA, tempA, #1
+        write_value (0x1020 | (tempA << 9) | (tempA << 6) | (0xFF & 0x1F));
         // BRnp 2 spots earlier (-3 because PC is already incremented)
         inst.ccode = CC_P | CC_N;
         write_value (inst.ccode | (-0x03 & 0x1FF));
@@ -3664,19 +3704,15 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (inst.ccode | (0x05 & 0x1FF));
 
         // negative R2:
-        /*  R1 = R1 + R3
-            R2 = R2 + 1
+        /*  R1 = R1 + tempB
+            tempA = tempA + 1
             BR not zero 2 spots earlier
             Negate answer in R1 */
         
-        // ADD R1, R1, R3 (using a conditional statement to take immediate value into account)
-        if (operands == O_RRI) {
-            (void)read_val (o3, &val, 5);
-            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (val & 0x1F));
-        }
-        else write_value (0x1000 | (r1 << 9) | (r1 << 6) | r3);
-        // ADD R2, R2, #1
-        write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0x01 & 0x1F));
+        // ADD R1, R1, tempB
+        write_value (0x1000 | (r1 << 9) | (r1 << 6) | tempB);
+        // ADD tempA, tempA, #1
+        write_value (0x1020 | (tempA << 9) | (tempA << 6) | (0x01 & 0x1F));
         // BRnp 2 spots earlier  (-3 because PC is already incremented)
         inst.ccode = CC_P | CC_N;
         write_value (inst.ccode | (-0x03 & 0x1FF));
@@ -3685,6 +3721,24 @@ generate_instruction (operands_t operands, const char* opstr)
            ADD r1, r1, #1 */
 	    write_value (0x903F | (r1 << 9) | (r1 << 6));
 		write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+
+        /* check if tempB is negative by adding 0 to tempB and checking condition code */
+        write_value (0x1020 | (tempB << 9) | (tempB << 6) | (0x00 & 0x1F));
+        // BRzp 2 spots later  (don't negate the answer if tempB is negative)
+        inst.ccode = CC_P | CC_Z;
+        write_value (inst.ccode | (0x02 & 0x1FF));
+        /* negate R1, because answer should be negative:
+           NOT r1, r1
+           ADD r1, r1, #1 */
+	    write_value (0x903F | (r1 << 9) | (r1 << 6));
+		write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+
+        // restore what was originally in tempA back into tempA
+        // LD tempA, #-20
+        write_value (0x2000 | (tempA << 9) | (-0x17 & 0x1FF));
+        // restore what was originally in tempB back into tempB
+        // LD tempB, #-20
+        write_value (0x2000 | (tempB << 9) | (-0x17 & 0x1FF));
 
         /* Update condition code by adding 0 to the updated register */
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
