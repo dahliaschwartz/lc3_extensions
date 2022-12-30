@@ -3638,18 +3638,15 @@ generate_instruction (operands_t operands, const char* opstr)
            these temporary registers will account for repeated registers */
         ;
         int tempA, tempB = 0;
+        
+        int i = 0;
+        while ((i == r1) || (i == r2) || (i == r3)) i++;
+        tempA = i;
 
-        for (int i=0; i<=4; i++){
-            if ((i != r1) && (i != r2) && (i != r3)){
-                tempA = i;
-            }
-        }
-        for (int i=0; i<=5; i++){
-            if ((i != r1) && (i != r2) && (i != r3) && (i != tempA)){
-                tempB = i;
-            }
-        }
-        printf("\nr1: %d, r2: %d, r3: %d, tempA: %d, tempB: %d\n\n", r1, r2, r3, tempA, tempB);
+        i = 0;
+        while ((i == r1) || (i == r2) || (i == r3) || (i == tempA)) i++;
+        tempB = i;
+
         /* store what's located in tempA and tempB into memory:
            ST tempA, #2
            ST tempB, #2
@@ -3722,19 +3719,6 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x903F | (r1 << 9) | (r1 << 6));
 		write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
 
-        /* check if tempA is negative by adding 0 to tempA and checking condition code */
-        // write_value (0x1020 | (tempA << 9) | (tempA << 6) | (0x00 & 0x1F));
-        // // BRzp 2 spots later (only negate the answer if tempA is negative)
-        // inst.ccode = CC_P | CC_Z;
-        // write_value (inst.ccode | (0x02 & 0x1FF));
-
-        
-        /* negate R1, because answer should be negative:
-           NOT r1, r1
-           ADD r1, r1, #1 */
-	    // write_value (0x903F | (r1 << 9) | (r1 << 6));
-		// write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-
         // restore what was originally in tempA back into tempA
         // LD tempA, #-18
         write_value (0x2000 | (tempA << 9) | (-0x13 & 0x1FF));
@@ -3747,10 +3731,17 @@ generate_instruction (operands_t operands, const char* opstr)
         break;
     /* copy the contents of registerA into registerB */
     case OP_MOV:
-        /* AND r1, #0
-           ADD r1, r1, r2 */
-	    write_value (0x5020 | (r1 << 9) | (val & 0x00));
-        write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+        // attempt to move value from registerA into registerA simply updates condition code
+        if (r1 == r2){
+            /* Update condition code by adding 0 to the updated register */
+            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
+        }
+        else{
+            /* AND r1, #0
+            ADD r1, r1, r2 */
+            write_value (0x5020 | (r1 << 9) | (val & 0x00));
+            write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+        }
 	    break;
     /* place the negation of registerA into registerB */
     case OP_NEG:
@@ -3767,10 +3758,9 @@ generate_instruction (operands_t operands, const char* opstr)
         // De Morgan's:
         // A | B = NOT (NOT(A) & NOT(B))
 
-        /* find a register that is not called by the user in the SUB operation */
+        /* find a register that is not called by the user in the OR operation */
         ;
-        int i = 0;
-
+        i = 0;
         while ((i == r1) || (i == r2) || (i == r3)) i++;
         tempA = i;
         
@@ -3831,36 +3821,46 @@ generate_instruction (operands_t operands, const char* opstr)
 	    break;
     /* subtract */
     case OP_SUB:
-	    if (operands == O_RRI) {
-            // ADD r1, r2, -val
-	        (void)read_val (o3, &val, 5);
-		    write_value (0x1020 | (r1 << 9) | (r2 << 6) | (-val & 0x1F));
-	    } else{
-            /* if r1 == r2 == r3, make r1 = 0 */
-            if (r1 == r2 && r1 == r3){
-                write_value (0x5020 | (r1 << 9) | (val & 0x00));
-            }
-            /* otherwise, negate r3 and add it into r1:
-            NOT r3, r3;
-            ADD r3, r3, #1;
-            ADD r1, r2, r3; */
-            else{
-            write_value (0x903F | (r3 << 9) | (r3 << 6));
-            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x01 & 0x1F));
-            write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
-            }
+        /* find a register that is not called by the user in the SUB operation */
+        ;
+        i = 0;
+        while ((i == r1) || (i == r2) || (i == r3)) i++;
+        tempA = i;
+        
+        /* store what's located in tempA into memory:
+           ST tempA, #1
+           BRnzp #1 (to skip the location in memory that contains tempB) */
+        write_value (0x3000 | (tempA << 9) | (0x01 & 0x1FF));
+        inst.ccode = CC_N | CC_Z | CC_P;
+        write_value (inst.ccode | (0x01 & 0x1FF));
 
-            /* if r1 != r3, negate r3 again so that the prior value is restored:
-            SUB r3, r3, #1;
-            NOT r3, r3;     */
-            if (r1 != r3){
-                write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0xFF & 0x1F));
-                write_value (0x903F | (r3 << 9) | (r3 << 6));
-            }
+        // PLACEHOLDER
+        write_value (0x0000);
 
-            /* Update condition code by adding 0 to the updated register */
-            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
+        /* move the contents of r3 into tempA:
+           AND tempA, tempA, #0
+           ADD tempA, tempA, r3 */
+        write_value (0x5020 | (tempA << 9) | (tempA << 6) | (0x00 & 0x1F));
+        if (operands == O_RRI) {
+            (void)read_val (o3, &val, 5);
+            write_value (0x1020 | (tempA << 9) | (tempA << 6) | (val & 0x1F));
         }
+        else write_value (0x1000 | (tempA << 9) | (tempA << 6) | r3);
+
+        /* NEGATE tempA: */
+        // NOT tempA, tempA
+        write_value (0x903F | (tempA << 9) | (tempA << 6));
+        // ADD tempA, tempA, #1
+		write_value (0x1020 | (tempA << 9) | (tempA << 6) | (0x01 & 0x1F));
+
+        // ADD r1, r2, tempA
+        write_value (0x1000 | (r1 << 9) | (r2 << 6) | tempA);
+
+        // restore what was originally in tempA back into tempA (LD tempA, #-6)
+        write_value (0x2000 | (tempA << 9) | (-0x07 & 0x1FF));
+
+        /* Update condition code by adding 0 to the updated register */
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
 	    break;
 	case OP_TRAP:
 	    (void)read_val (o1, &val, 8);

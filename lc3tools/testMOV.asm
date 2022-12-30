@@ -2,4 +2,7 @@
 ADD R0, R0, #4
 MOV R2, R0
 MOV R1, R2
+ADD R3, R3, #-1
+MOV R4, R3
+MOV R3, R3
 .END

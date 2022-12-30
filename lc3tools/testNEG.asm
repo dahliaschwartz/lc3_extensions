@@ -1,5 +1,5 @@
 	.ORIG x3000
-	ADD R0, R0, #-5
+	ADD R0, R0, #-1
 	NEG R0, R0
 	RST R1
 	ADD R1, R1, #-9
@@ -8,4 +8,5 @@
 	NEG R2, R2
 	NEG R3, R2
 	NEG R4, R3
+	NEG R5, R5
 	.END
