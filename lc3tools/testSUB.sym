@@ -2,4 +2,6 @@
 // Scope level 0:
 //	Symbol Name       Page Address
 //	----------------  ------------
+//	FIVE              300B
+//	SEVEN             300C
 
