@@ -1,7 +1,7 @@
 /* find two registers that are not called by the user in the MLT operation */
 ;
 tempA = 0;
-while ((tempA == r1) || (tempA == r2) || (tempA == r3)) tempB++;
+while ((tempA == r1) || (tempA == r2) || (tempA == r3)) tempA++;
 
 tempB = 0;
 while ((tempB == r1) || (tempB == r2) || (tempB == r3) || (tempB == tempA)) tempB++;

@@ -3568,7 +3568,7 @@ generate_instruction (operands_t operands, const char* opstr)
         val = find_label (o2, 9);
 
     switch (inst.op) {
-    int i, j, tempA, tempB = 0;
+    int tempA, tempB = 0;
 	/* Generate real instruction opcodes. */
 	case OP_ADD:
 	    if (operands == O_RRI) {
