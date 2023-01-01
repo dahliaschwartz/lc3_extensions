@@ -1,14 +1,10 @@
 /* find two registers that are not called by the user in the MLT operation */
 ;
-int tempA, tempB = 0;
+tempA = 0;
+while ((tempA == r1) || (tempA == r2) || (tempA == r3)) tempB++;
 
-int i = 0;
-while ((i == r1) || (i == r2) || (i == r3)) i++;
-tempA = i;
-
-i = 0;
-while ((i == r1) || (i == r2) || (i == r3) || (i == tempA)) i++;
-tempB = i;
+tempB = 0;
+while ((tempB == r1) || (tempB == r2) || (tempB == r3) || (tempB == tempA)) tempB++;
 
 /* store what's located in tempA and tempB into memory:
     ST tempA, #2
