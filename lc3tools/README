@@ -1,3 +1,46 @@
+----------------------------------------------------------------------
+   LC3 ADDITIONS - COMPUTER SYSTEMS FINAL PROJECT (DAHLIA SCHWARTZ)
+----------------------------------------------------------------------
+
+Added support for additional LC3 instructions:
+
+1) DEC
+   - Decrement a register by #1
+   - R format only
+
+2) INC
+   - Increment a register by #1
+   - R format only
+
+3) MLT
+   - Multiply
+   - RRR or RRI formats only
+
+4) MOV
+   - Move from one register to another
+   - RR format only
+
+5) NEG
+   - Negate a register
+   - RR format only
+
+6) OR
+   - Bitwise or (|)
+   - RRR or RRI formats only
+
+7) RST
+   - Reset a register to #0
+   - R format only
+
+8) SUB
+   - Subtract
+   - RRR or RRI formats only
+
+
+* Each of these additional instructions properly updates the condition codes
+
+
+
 -----------------------------
    DESCRIPTION OF CONTENTS
 -----------------------------

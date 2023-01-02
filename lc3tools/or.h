@@ -15,9 +15,9 @@ write_value (inst.ccode | (0x01 & 0x1FF));
 // PLACEHOLDER
 write_value (0x0000);
 
-/* move the contents of r3 into tempA:
+/* move the contents of o3 into tempA:
     AND tempA, tempA, #0
-    ADD tempA, tempA, r3 */
+    ADD tempA, tempA, o3 */
 write_value (0x5020 | (tempA << 9) | (tempA << 6) | (0x00 & 0x1F));
 if (operands == O_RRI) {
     (void)read_val (o3, &val, 5);

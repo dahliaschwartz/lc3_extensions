@@ -24,9 +24,9 @@ write_value (0x0000);
     ADD tempA, tempA, r2 */
 write_value (0x5020 | (tempA << 9) | (tempA << 6) | (0x00 & 0x1F));
 write_value (0x1000 | (tempA << 9) | (tempA << 6) | r2);
-/* move the contents of r3 into tempB:
+/* move the contents of o3 into tempB:
     AND tempB, tempB, #0
-    ADD tempB, tempB, r3 */
+    ADD tempB, tempB, o3 */
 write_value (0x5020 | (tempB << 9) | (tempB << 6) | (0x00 & 0x1F));
 if (operands == O_RRI) {
     (void)read_val (o3, &val, 5);

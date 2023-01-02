@@ -21,30 +21,8 @@ enum operands_t {
     NUM_OPERANDS
 };
 
-typedef enum opcode_t opcode_t;
-enum opcode_t {
-    /* no opcode seen (yet) */
-    OP_NONE,
-
-    /* real instruction opcodes */
-    OP_ADD, OP_AND, OP_BR, OP_DEC, OP_INC, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
-    OP_LEA, OP_MLT, OP_MOV, OP_NEG, OP_NOT, OP_OR, OP_RST, OP_RTI, OP_ST, OP_STI, OP_STR, OP_SUB, OP_TRAP,
-
-    /* trap pseudo-ops */
-    OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
-
-    /* non-trap pseudo-ops */
-    OP_FILL, OP_RET, OP_STRINGZ,
-
-    /* directives */
-    OP_BLKW, OP_END, OP_ORIG, 
-
-    NUM_OPS
-};
-
 typedef struct inst_t inst_t;
 struct inst_t {
-    opcode_t op;
     ccode_t  ccode;
 };
 
@@ -81,7 +59,6 @@ void sub(operands_t operands, int r1, int r2, int r3, const char* o3);
 
 int read_val (const char* s, int* vptr, int bits);
 void write_value(int);
-
 
 int main(void) {
     test_dec();

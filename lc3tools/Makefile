@@ -58,7 +58,7 @@ CFLAGS  = -g -Wall
 LDFLAGS = -g
 LC3AS   = ./lc3as
 
-ALL: dist_lc3as dist_lc3convert dist_lc3sim dist_lc3sim-tk
+ALL: dist_lc3as dist_lc3convert dist_lc3sim dist_lc3sim-tk tests
 
 clean: dist_lc3as_clean dist_lc3convert_clean dist_lc3sim_clean \
 	dist_lc3sim-tk_clean
@@ -92,7 +92,7 @@ dist_lc3as: lc3as${EXE}
 lc3as${EXE}: lex.lc3.o symbol.o
 	${GCC} ${LDFLAGS} -o lc3as${EXE} lex.lc3.o symbol.o
 
-lex.lc3.c: lc3.f
+lex.lc3.c: lc3.f dec.h inc.h mlt.h mov.h neg.h or.h rst.h sub.h
 	${FLEX} -i -Plc3 lc3.f
 
 dist_lc3as_clean::
@@ -167,3 +167,9 @@ dist_lc3sim-tk_clean::
 dist_lc3sim-tk_clear::
 	${RM} -f lc3sim-tk
 
+#
+# Makefile fragment for tests
+#
+
+tests: dec.h inc.h mlt.h mov.h neg.h or.h rst.h sub.h
+	./tests
