@@ -35,30 +35,30 @@
 ###############################################################################
 
 # These path names are automatically set by configure.
-GCC  = __GCC__
-FLEX = __FLEX__
-EXE  = __EXE__
-OS_SIM_LIBS = __OS_SIM_LIBS__
-RM   = __RM__
-CP   = __CP__
-MKDIR = __MKDIR__
-CHMOD = __CHMOD__
-SED = __SED__
-WISH = __WISH__
-RLIPATH = __RLIPATH__
-RLLPATH = __RLLPATH__
-USE_READLINE = __USE_READLINE__
-INSTALL_DIR = __INSTALL_DIR__
-CODE_FONT = __CODE_FONT__
-BUTTON_FONT = __BUTTON_FONT__
-CONSOLE_FONT = __CONSOLE_FONT__
+GCC  = /usr/bin/gcc
+FLEX = /usr/bin/flex
+EXE  = 
+OS_SIM_LIBS = -lcurses
+RM   = /bin/rm
+CP   = /bin/cp
+MKDIR = /bin/mkdir
+CHMOD = /bin/chmod
+SED = /bin/sed
+WISH = /usr/bin/wish
+RLIPATH = -I/usr/include
+RLLPATH = 
+USE_READLINE = 
+INSTALL_DIR = /home/dschwartz/computerSystems/semProj/lc3tools
+CODE_FONT = {{Lucida Console} 11 bold}
+BUTTON_FONT = {{Lucida Console} 10 normal}
+CONSOLE_FONT = {{Lucida Console} 10 bold}
 # End of configuration block.
 
 CFLAGS  = -g -Wall
 LDFLAGS = -g
 LC3AS   = ./lc3as
 
-ALL: dist_lc3as dist_lc3convert dist_lc3sim dist_lc3sim-tk
+ALL: dist_lc3as dist_lc3convert dist_lc3sim dist_lc3sim-tk tests
 
 clean: dist_lc3as_clean dist_lc3convert_clean dist_lc3sim_clean \
 	dist_lc3sim-tk_clean
@@ -68,6 +68,9 @@ clear: dist_lc3as_clear dist_lc3convert_clear dist_lc3sim_clear \
 
 distclean: clean clear
 	${RM} -f Makefile
+
+test: tests${EXE}
+	./tests${EXE}
 
 install: ALL
 	${MKDIR} -p ${INSTALL_DIR}
@@ -79,9 +82,6 @@ install: ALL
 	${CHMOD} 444 ${INSTALL_DIR}/lc3os.obj ${INSTALL_DIR}/lc3os.sym \
 		${INSTALL_DIR}/COPYING ${INSTALL_DIR}/NO_WARRANTY      \
 		${INSTALL_DIR}/README
-
-test: tests
-	./tests
 
 %.o: %.c
 	${GCC} -c ${CFLAGS} -o $@ $<
@@ -174,5 +174,5 @@ dist_lc3sim-tk_clear::
 # Makefile fragment for tests
 #
 
-tests: dec.h inc.h mlt.h mov.h neg.h or.h rst.h sub.h
-	${GCC} -g -o tests tests.c
+tests${EXE}: tests.c dec.h inc.h mlt.h mov.h neg.h or.h rst.h sub.h
+	${GCC} -g -o tests${EXE} tests.c
