@@ -1,7 +1,8 @@
 /* find a register that is not called by the user in the SUB operation */
 ;
 tempA = 0;
-while ((tempA == r1) || (tempA == r2) || (tempA == r3)) tempA++;
+while ((tempA == r1) || (tempA == r2) || (tempA == r3))
+    tempA++;
 
 /* store what's located in tempA into memory:
     ST tempA, #1

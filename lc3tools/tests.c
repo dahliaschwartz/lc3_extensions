@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int a_output[100];
+int a_output[30];
 int idx = 0;
 
 typedef enum ccode_t ccode_t;
@@ -29,11 +29,9 @@ struct inst_t {
 inst_t inst;
 operands_t operands;
 const unsigned char* o3;
-int val;
-int line_num = 0;
-int num_errors = 0;
-int tempA, tempB = 0;
+int val, line_num, num_errors, tempA, tempB = 0;
 
+// test cases
 void test_dec();
 void test_inc();
 void test_mlt_registers();
@@ -48,6 +46,7 @@ void test_rst();
 void test_sub_registers();
 void test_sub_immediate();
 
+// methods that #include code for each operand being tested
 void dec(int r1);
 void inc(int r1);
 void mlt(operands_t operands, int r1, int r2, int r3, const char* o3);
@@ -308,6 +307,7 @@ void test_sub_immediate() {
     printf("Subtracting with immediate value\n");
 }
 
+// each test calls its corresponding method that uses #include to run the code for its respective opperand
 void dec(int r1) {
     #include "dec.h"
 }

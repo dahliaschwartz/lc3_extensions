@@ -1,10 +1,12 @@
 /* find two registers that are not called by the user in the MLT operation */
 ;
 tempA = 0;
-while ((tempA == r1) || (tempA == r2) || (tempA == r3)) tempA++;
+while ((tempA == r1) || (tempA == r2) || (tempA == r3))
+    tempA++;
 
 tempB = 0;
-while ((tempB == r1) || (tempB == r2) || (tempB == r3) || (tempB == tempA)) tempB++;
+while ((tempB == r1) || (tempB == r2) || (tempB == r3) || (tempB == tempA))
+    tempB++;
 
 /* store what's located in tempA and tempB into memory:
     ST tempA, #2
@@ -43,7 +45,7 @@ write_value (0x1020 | (tempB << 9) | (tempB << 6) | (0x00 & 0x1F));
 inst.ccode = CC_N;
 write_value (inst.ccode | (0x04 & 0x1FF));
 
-// general case (positive R3):
+// general case (positive o3):
 /*  R1 = R1 + tempA
     tempB = tempB - 1
     BR not zero 2 spots earlier */
@@ -59,7 +61,7 @@ write_value (inst.ccode | (-0x03 & 0x1FF));
 inst.ccode = CC_P | CC_N | CC_Z;
 write_value (inst.ccode | (0x05 & 0x1FF));
 
-// negative R3:
+// negative o3:
 /*  R1 = R1 + tempA
     tempB = tempB + 1
     BR not zero 2 spots earlier
