@@ -69,8 +69,8 @@ clear: dist_lc3as_clear dist_lc3convert_clear dist_lc3sim_clear \
 distclean: clean clear
 	${RM} -f Makefile
 
-test: tests
-	./tests
+test: tests${EXE}
+	./tests${EXE}
 
 install: ALL
 	${MKDIR} -p ${INSTALL_DIR}
@@ -174,5 +174,5 @@ dist_lc3sim-tk_clear::
 # Makefile fragment for tests
 #
 
-tests: tests.c dec.h inc.h mlt.h mov.h neg.h or.h rst.h sub.h
-	${GCC} -g -o tests tests.c
+tests${EXE}: tests.c dec.h inc.h mlt.h mov.h neg.h or.h rst.h sub.h
+	${GCC} -g -o tests${EXE} tests.c

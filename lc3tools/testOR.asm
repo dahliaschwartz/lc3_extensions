@@ -1,6 +1,0 @@
-.ORIG x3000
-ADD R0, R0, #4
-OR R1, R0, #0
-OR R2, R0, #-1
-OR R3, R2, #1
-.END
